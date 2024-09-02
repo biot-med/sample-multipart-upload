@@ -15,7 +15,7 @@ FILE_PATH = "/path_to_file/file.zip"  # Replace with the file you want to split,
 PART_SIZE = 20 * 1024 * 1024  # 20MB
 PATIENT_ID = "patient_id"  # Replace with your patient ID
 FILE_KEY = "file_entity_name"  # Replace with the "File" entity JSON name configured in the template
-FILE_NAME = "untitled folder/example.zip"  # Filename to be uploaded into patient
+FILE_NAME = "example.zip"  # Filename to be uploaded into patient
 
 
 # Function to login and get JWT token
