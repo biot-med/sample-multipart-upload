@@ -122,8 +122,8 @@ def complete_upload(api_url, file_id, etags, token):
 
 
 # Function to update the patient ID with the file ID
-def update_patient_id(base_url, patient_id, file_id, file_key, token):
-    url = f"{base_url}/organization/v1/users/patients/{patient_id}"
+def update_patient_id(api_url, patient_id, file_id, file_key, token):
+    url = f"{api_url}/organization/v1/users/patients/{patient_id}"
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {token}'
