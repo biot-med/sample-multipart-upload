@@ -3,6 +3,7 @@ import os
 import platform
 import subprocess
 import mimetypes
+import re
 
 # Constants
 BASE_URL = "https://api.xxxxx.com"  # Replace with your API URL
@@ -14,7 +15,7 @@ FILE_PATH = "/path_to_file/file.zip"  # Replace with the file you want to split,
 PART_SIZE = 20 * 1024 * 1024  # 20MB
 PATIENT_ID = "patient_id"  # Replace with your patient ID
 FILE_KEY = "file_entity_name"  # Replace with the "File" entity JSON name configured in the template
-FILE_NAME = "example.zip"  # Filename to be uploaded into patient
+FILE_NAME = "untitled folder/example.zip"  # Filename to be uploaded into patient
 
 
 # Function to login and get JWT token
@@ -26,6 +27,7 @@ def get_token(username, password):
     response = requests.post(LOGIN_URL, json=login_payload)
     response.raise_for_status()
     return response.json()["accessJwt"]["token"]
+
 
 # Function to split file into parts
 def split_file(file_path, part_size):
@@ -55,14 +57,22 @@ def split_file(file_path, part_size):
             if f.startswith("part_"):
                 os.rename(f, f"{f}.bin")
 
+
 # Function to determine the MIME type of a file
 def get_mime_type(file_path):
     mime_type, _ = mimetypes.guess_type(file_path)
     return mime_type or "application/octet-stream"
 
-# Function to get list of file parts
+
+# Function to get list of file parts and sort them
 def get_file_parts():
-    return [f for f in os.listdir() if f.startswith("part_")]
+    # List and sort files with 'part_' prefix, based on the suffix part
+    parts = sorted(
+        [f for f in os.listdir() if f.startswith("part_") and f.endswith(".bin")],
+        key=lambda f: re.search(r'part_(\w+)\.bin', f).group(1)
+    )
+    return parts
+
 
 # Function to initiate the upload
 def initiate_upload(api_url, file_name, mime_type, parts_count, token):
@@ -85,6 +95,7 @@ def initiate_upload(api_url, file_name, mime_type, parts_count, token):
 
     return upload_info["id"], signed_urls
 
+
 # Function to upload a file part
 def upload_part(signed_url, file_path):
     with open(file_path, 'rb') as file_part:
@@ -92,6 +103,7 @@ def upload_part(signed_url, file_path):
         response.raise_for_status()
         # Extract ETag from response headers
         return response.headers.get('ETag')
+
 
 # Function to complete the upload
 def complete_upload(api_url, file_id, etags, token):
@@ -107,6 +119,7 @@ def complete_upload(api_url, file_id, etags, token):
     complete_info = response.json()
 
     return complete_info
+
 
 # Function to update the patient ID with the file ID
 def update_patient_id(base_url, patient_id, file_id, file_key, token):
@@ -124,11 +137,13 @@ def update_patient_id(base_url, patient_id, file_id, file_key, token):
     response.raise_for_status()
     return response.json()
 
+
 # Function to delete the split file parts
 def delete_file_parts():
     for f in os.listdir():
-        if f.startswith("part_"):
+        if f.startswith("part_") and f.endswith(".bin"):
             os.remove(f)
+
 
 # Main function
 def main():
@@ -137,14 +152,15 @@ def main():
     parts = get_file_parts()
     mime_type = get_mime_type(FILE_PATH)  # Determine the MIME type of the file
     file_id, signed_urls = initiate_upload(BASE_URL, FILE_NAME, mime_type, len(parts), token)
-
+    print(f"File ID is: {file_id}")
     print("Signed URLs:")
     for part_number, signed_url in signed_urls.items():
         print(f"Part {part_number}: {signed_url}")
 
     etags = []
     for i, part in enumerate(parts):
-        etag = upload_part(signed_urls[i + 1], part)
+        part_number = i + 1
+        etag = upload_part(signed_urls[part_number], part)
         etags.append(etag)
 
     complete_info = complete_upload(BASE_URL, file_id, etags, token)
@@ -153,6 +169,7 @@ def main():
 
     # Delete the split file parts
     delete_file_parts()
+
 
 if __name__ == "__main__":
     main()
